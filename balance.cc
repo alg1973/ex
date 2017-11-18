@@ -4,102 +4,59 @@
 #include <algorithm>
 #include <cstdlib>
 
-struct node {
-  explicit node(int v,int d): key(v),data(d),height(1),left(nullptr),right(nullptr)
-  {}
-  int key;
-  int data;
-  int height;
-  node* left;
-  node* right;
-};
 
 
 class avl_tree {
+  // Char is enought but should be of course implemented with differences of 
+  // heights of sapling nodes (-1,0,1);
+  typedef char depth_t; 
+  
+  struct node {
+    explicit node(int v,int d): key(v),data(d),height(1),left(nullptr),right(nullptr)
+    {}
+    int key;
+    int data;
+    depth_t height;
+    node* left;
+    node* right;
+  };
 public:
   avl_tree():root(nullptr)
   {}
   std::string print(void) const {
     std::ostringstream o;
-    //o<<"(";
     int_print(root,o);
-    //o<<")";
     return o.str();
   }
   int height(void) const {
     return get_height(root);
   }
-  int comp_height(node* r) const {
-    if (!r)
-      return 0;
-    return std::max(comp_height(r->left),comp_height(r->right))+1;
-  }
   
   void check_h(void) {
     check_height(root);
   }
-  int check_height(node* n) {
-    if (!n)
-      return 0;
-    int l=check_height(n->left);
-    int r=check_height(n->right);
- 
-    if ((std::max(l,r)-std::min(r,l))>1) {
-      std::cout<<"Invalid balance: "<<n->height<<" k: "<<n->key<<" l: "<<l<<" r: "<<r<<std::endl;
-    }
-    int m=std::max(l,r)+1;
-    if (m!=n->height) {
-      std::cout<<"Invalid height: "<<n->height<<" k: "<<n->key<<" l: "<<l<<" r: "<<r<<std::endl;
-    }
-    return m;
-  }
-
-  void insert(int key,int data) {
-    if(!root) {
-      root = new node(key,data);
-    } else {
-      add_node(root,key,data);
-      upd_height(root);
-      root=fix_height(root);
-    }
-  }
-  std::pair<bool,int> find(int key) const {
-    auto r=int_find(root,key);
-    if (r)
-      return std::make_pair(true,r->data);
-    return std::make_pair(false,0);
-  }
- 
+  void insert(int key,int data);
+  std::pair<bool,int> find(int key) const; 
   void erase(int k) {
     root=delete_node(root,k);
   }
-
 private:
+  depth_t comp_height(node* r) const {
+    if (!r) return 0;
+    return std::max(comp_height(r->left),comp_height(r->right))+1;
+  }
+  depth_t check_height(node* n); 
   node* delete_node(node* n,int k); 
   node*  min(node* n) {
     if (n && n->left) return min(n->left);
     else return n; 
   }
- 
-
-  node* chop_min(node*& n) {
-    if (!n)  return n;
-    if (!n->left) {
-      node* r = n;
-      n=n->right;
-      return r;
-    } else { 
-      node* r=chop_min(n->left);
-      upd_height(n->left);
-      return r;
-    }
-  }
-  
+  node* chop_min(node*& n);
   void upd_height(node* r) {
     if (r) r->height = std::max(get_height(r->left),get_height(r->right))+1; 
   }
-  int get_height(node* r) const;
-  int get_diff(node* r) const {
+  depth_t get_height(node* r) const;
+  depth_t get_diff(node* r) const {
     if (r) return get_height(r->left)-get_height(r->right);
     return 0;
   }
@@ -112,7 +69,63 @@ private:
   node* root;
 };
 
-int 
+avl_tree::depth_t 
+avl_tree::check_height(node* n) 
+{
+  if (!n)
+    return 0;
+  depth_t l=check_height(n->left);
+  depth_t r=check_height(n->right);
+  
+  if ((std::max(l,r)-std::min(r,l))>1) {
+    std::cout<<"Invalid balance: "<<n->height<<" k: "<<n->key<<" l: "<<l<<" r: "<<r<<std::endl;
+  }
+  depth_t m=std::max(l,r)+1;
+  if (m!=n->height) {
+    std::cout<<"Invalid height: "<<n->height<<" k: "<<n->key<<" l: "<<l<<" r: "<<r<<std::endl;
+  }
+  return m;
+}
+
+void 
+avl_tree::insert(int key,int data) 
+{
+  if(!root) {
+    root = new node(key,data);
+  } else {
+    add_node(root,key,data);
+    upd_height(root);
+    root=fix_height(root);
+  }
+}
+
+std::pair<bool,int> 
+avl_tree::find(int key) const 
+{
+  auto r=int_find(root,key);
+  if (r)
+    return std::make_pair(true,r->data);
+  return std::make_pair(false,0);
+}
+ 
+
+avl_tree::node* 
+avl_tree::chop_min(node*& n) 
+{
+  if (!n)  return n;
+  if (!n->left) {
+    node* r = n;
+    n=n->right;
+    return r;
+  } else { 
+    node* r=chop_min(n->left);
+    upd_height(n->left);
+    return r;
+  }
+}
+ 
+
+avl_tree::depth_t 
 avl_tree::get_height(node* r) const
 {
   if (!r)
@@ -120,10 +133,10 @@ avl_tree::get_height(node* r) const
   return r->height;
 }
 
-node*
+avl_tree::node*
 avl_tree::fix_height(node* r) 
 {
-  int diff = get_diff(r);
+  depth_t diff = get_diff(r);
   if (diff==0 || abs(diff)==1) 
     return r;
   
@@ -186,7 +199,7 @@ avl_tree::add_node(node* r,int key,int data) {
   }
 }
 
-const node* 
+const avl_tree::node* 
 avl_tree::int_find(node* n, int k) const 
 {
   if (!n)
@@ -200,7 +213,7 @@ avl_tree::int_find(node* n, int k) const
 }
 
 
-node*
+avl_tree::node*
 avl_tree::delete_node(node* n,int k) 
 {
   if (!n) return nullptr;
@@ -237,7 +250,7 @@ avl_tree::delete_node(node* n,int k)
 
 
 
-node*
+avl_tree::node*
 avl_tree::rotate_right(node* r) {
   if (!r || !r->left) {
     return r;
@@ -250,7 +263,7 @@ avl_tree::rotate_right(node* r) {
   return new_root;
 }
 
-node*
+avl_tree::node*
 avl_tree::rotate_left(node* r) {
   if (!r || !r->right) {
     return r;
