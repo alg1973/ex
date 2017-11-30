@@ -13,8 +13,9 @@ namespace pack {
   using prefix_map=std::unordered_map<std::uint8_t,bits>;
 
   //where is a problem with word_size. The longest bit prefix length can be equal 
-  //to unique charachters amount. Fortunately in order to have maximum trie height charachters 
-  //frequences should be in fibbonachi sequence.
+  //to unique charachters amount - 1 Fortunately in order to have maximum trie height characters 
+  //frequences should be in fibbonachi sequence. May be better to store frequences and recreate trie 
+  //every time.
  
   constexpr int word_size=64;
   using word_t=std::uint64_t;
@@ -40,7 +41,8 @@ namespace pack {
     bool get(int num) const {
       return pref & (1<<num);
     }
-    word_t pref;
+    // Should be array of bytes in order not to deal with MSB & LSB.
+    word_t pref; 
   };
   
   
@@ -204,6 +206,7 @@ private:
     word_t so_far;
   };
   
+  // Should be changed to array of bytes. 
   int
   bin_stream::get_bits(std::uint8_t sz,word_t& buf)
   {
