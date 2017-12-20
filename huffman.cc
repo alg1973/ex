@@ -12,7 +12,7 @@ namespace pack {
   using bits=std::vector<std::uint8_t>;
   using prefix_map=std::unordered_map<std::uint8_t,bits>;
 
-  //where is a problem with word_size. The longest bit prefix length can be equal 
+  //There is a problem with word_size. The longest bit prefix length can be equal 
   //to unique charachters amount - 1 Fortunately in order to have maximum trie height characters 
   //frequences should be in fibbonachi sequence. May be better to store frequences and recreate trie 
   //every time.
