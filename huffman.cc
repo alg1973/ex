@@ -12,16 +12,18 @@ namespace pack {
   using bits=std::vector<std::uint8_t>;
   using prefix_map=std::unordered_map<std::uint8_t,bits>;
 
-  //There is a problem with word_size. The longest bit prefix length can be equal 
-  //to unique charachters amount - 1 Fortunately in order to have maximum trie height characters 
-  //frequences should be in fibbonachi sequence. May be better to store frequences and recreate trie 
-  //every time.
+  // There is a problem with word_size. The longest bit prefix 
+  // length can be equal to unique charachters amount - 1 
+  // Fortunately in order to have maximum trie height characters 
+  // frequences should be in fibbonachi sequence. May be better 
+  // to store frequences and recreate trie every time.
  
   constexpr int word_size=64;
   using word_t=std::uint64_t;
 
   struct node {
-    node (int f,char c): freq(f),chr(c),zero_link(nullptr),one_link(nullptr)
+    node (int f,char c): freq(f),chr(c),zero_link(nullptr),
+					one_link(nullptr)
     {}
     int freq;
     std::uint8_t chr;
@@ -64,7 +66,8 @@ public:
   }
 private:
   prefix_map  to_map(node* prefixes);
-  prefix find_char(node* rt,std::bitset<word_size> bit_sequence,int bit_pos,int blen);
+  prefix find_char(node* rt,std::bitset<word_size> bit_sequence,
+		   int bit_pos,int blen);
   void walk(node* rt,const bits& pref,prefix_map& tbl);
   node* build_from_frequences(const std::vector<int>& chars); 
   void add_leaf(node* n,const prefix& ent, int bit_pos);
@@ -166,14 +169,17 @@ private:
   }
   
   prefix 
-  trie::find_char(node* r,std::bitset<word_size> bit_sequence,int bit_pos, int blen)
+  trie::find_char(node* r,std::bitset<word_size> bit_sequence,
+		  int bit_pos, int blen)
   {
     
     if (!r ) { 
-      throw std::logic_error("Invalid bits sequence in data: down to nil leaf (trie corrupted)");
+      throw std::logic_error("Invalid bits sequence in data: "
+			     "down to nil leaf (trie corrupted)");
     }
     if (bit_pos>blen) {
-      throw std::logic_error("Invalid bits sequence in data: too much bits in a prefix");
+      throw std::logic_error("Invalid bits sequence in data: too "
+			     "much bits in a prefix");
     }
     if ((r->zero_link==nullptr) && (r->one_link==nullptr)) {
       prefix ret {r->chr,static_cast<std::uint8_t>(bit_pos),
@@ -193,7 +199,8 @@ private:
 
   class bin_stream {
   public:
-    bin_stream(const std::string& st): stream(st),position(0),bits_count(0),so_far(0)
+    bin_stream(const std::string& st): stream(st),position(0),
+				       bits_count(0),so_far(0)
     {}
     int get_bits(std::uint8_t sz,word_t& buf);
     bool is_eof(void) {
@@ -237,7 +244,8 @@ private:
       if (position<stream.size()) {
 	int bytes_read=0;
 	while((bytes_read<8) && (position<stream.size())) {
-	  so_far |=(0xff & static_cast<word_t>(stream[position++]))<<(bytes_read*(word_size/8));
+	  so_far |=(0xff & static_cast<word_t>(stream[position++]))
+		    <<(bytes_read*(word_size/8));
 	  bytes_read++;
 	}
 	bits_count=bytes_read*(word_size/8);
@@ -259,14 +267,16 @@ private:
     for(;;) {
       int read_len;
       if (bits_so_far<word_size) {
-	int read_len=bits_stream.get_bits(word_size-bits_so_far,next_bits);
+	int read_len=bits_stream.get_bits(word_size-bits_so_far,
+					  next_bits);
 	if (read_len>0) {
 	  next_bits <<=bits_so_far;
 	  current_word |=next_bits;
 	  bits_so_far+=read_len;
 	} 
       }
-      if (bits_so_far==0 || (bits_stream.is_eof() && bits_so_far==padding_bits))
+      if (bits_so_far==0 || (bits_stream.is_eof() && 
+          bits_so_far==padding_bits))
 	break;
       
       prefix chr=find(current_word,bits_so_far);
@@ -280,7 +290,8 @@ private:
 
   class bin_writer {
   public:
-    bin_writer(std::ofstream& fl): file(fl),current_byte(8,0),bits_collected(0)
+    bin_writer(std::ofstream& fl): file(fl),current_byte(8,0),
+			           bits_collected(0)
     {}
     void write(const std::vector<std::uint8_t>& bits);
     void write_bit(std::uint8_t bit) {
@@ -295,7 +306,7 @@ private:
     int write_tail(void) {
       int have_bits=bits_collected;
       if (have_bits) {
-	flash(); //side effect ... baad
+	flash(); 
       }
       return 8-have_bits;
     }
@@ -404,7 +415,8 @@ read_file(const std::string& file_in)
 
 class char_writer {
 public:
-  char_writer(std::ofstream& o, std::streamoff original_len): out(o),olen(original_len)
+  char_writer(std::ofstream& o, std::streamoff original_len): 
+					out(o),olen(original_len)
   {}
   void operator()(std::uint8_t chr) {
     out.write(reinterpret_cast<char*>(&chr),1);
@@ -416,7 +428,8 @@ private:
 
 
 void
-decompress(const std::string& file_in, const std::string& file_out, bool verbose)
+decompress(const std::string& file_in, const std::string& file_out, 
+	   bool verbose)
 {
   
   std::ifstream in;
@@ -476,7 +489,8 @@ decompress(const std::string& file_in, const std::string& file_out, bool verbose
 
 
 void
-compress(const std::string& file_in, const std::string& file_out,bool verbose)
+compress(const std::string& file_in, const std::string& file_out,
+	 bool verbose)
 {
    
   std::string txt=read_file(file_in);
