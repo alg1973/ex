@@ -339,18 +339,24 @@ main(int ac, char* av)
 {
 
   struct http_t* hdl = ht_init_handle();
-  printf("ret %d, host '%s', port %hd, uri '%s'\n", ht_parse_url(hdl,"http://"),hdl->host,hdl->port,hdl->uri);
-  printf("ret %d, host '%s', port %hd, uri '%s'\n", ht_parse_url(hdl,"httpx://"),hdl->host,hdl->port,hdl->uri);
-  printf("ret %d, host '%s', port %hd, uri '%s'\n", ht_parse_url(hdl,""),hdl->host,hdl->port,hdl->uri);
-  printf("ret %d, host '%s', port %hd, uri '%s'\n", ht_parse_url(hdl,"http://mail.ru"),hdl->host,hdl->port,hdl->uri);
-  printf("ret %d, host '%s', port %hd, uri '%s'\n", 
-	 ht_parse_url(hdl,"http://mail.ru:80/"),hdl->host,hdl->port,hdl->uri);
-  printf("ret %d, host '%s', port %hd, uri '%s'\n", 
-	 ht_parse_url(hdl,"http://mail.ru/bla/bla/bla.h"),hdl->host,hdl->port,hdl->uri);
-  printf("ret %d, host '%s', port %hd, uri '%s'\n", ht_parse_url(hdl,"http://:"),hdl->host,hdl->port,hdl->uri);
-  printf("ret %d, host '%s', port %hd, uri '%s'\n", ht_parse_url(hdl,"http://mail.ru:"),hdl->host,hdl->port,hdl->uri);
-  printf("ret %d, host '%s', port %hd, uri '%s'\n", ht_parse_url(hdl,"http://mvideo.ru:path"),hdl->host,hdl->port,hdl->uri);
-
+  int r = ht_parse_url(hdl,"http://");
+  printf("ret %d, host '%s', port %hd, uri '%s'\n", r, hdl->host,hdl->port,hdl->uri);
+  r = ht_parse_url(hdl,"httpx://");
+  printf("ret %d, host '%s', port %hd, uri '%s'\n", r, hdl->host,hdl->port,hdl->uri);
+  r = ht_parse_url(hdl,"");
+  printf("ret %d, host '%s', port %hd, uri '%s'\n", r, hdl->host,hdl->port,hdl->uri);
+  r = ht_parse_url(hdl,"http://mail.ru");
+  printf("ret %d, host '%s', port %hd, uri '%s'\n", r, hdl->host,hdl->port,hdl->uri);
+  r = ht_parse_url(hdl,"http://mail.ru:80/");
+  printf("ret %d, host '%s', port %hd, uri '%s'\n", r, hdl->host,hdl->port,hdl->uri);
+  r = ht_parse_url(hdl,"http://mail.ru/:80/");
+  printf("ret %d, host '%s', port %hd, uri '%s'\n", r, hdl->host,hdl->port,hdl->uri);
+  r = ht_parse_url(hdl,"http://:");
+  printf("ret %d, host '%s', port %hd, uri '%s'\n", r, hdl->host,hdl->port,hdl->uri);
+  r = ht_parse_url(hdl,"http://mail.ru:");
+  printf("ret %d, host '%s', port %hd, uri '%s'\n", r, hdl->host,hdl->port,hdl->uri);
+  r = ht_parse_url(hdl,"http://mvideo.ru:path");
+  printf("ret %d, host '%s', port %hd, uri '%s'\n", r, hdl->host,hdl->port,hdl->uri);
 }
 
 #endif
