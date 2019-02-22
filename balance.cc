@@ -9,10 +9,7 @@ namespace tree {
 
   template<typename KT,typename DT>
   class avl_tree {
-    // Char is enought but should be of course implemented with difference of 
-    // heights of sapling nodes (-1,0,1);
     using depth_t=char;
-    //typedef char depth_t;
     
     struct node {
       explicit node(const KT& v,const DT& d): key(v),data(d),height(1),left(nullptr),right(nullptr)
