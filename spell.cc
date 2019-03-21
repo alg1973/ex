@@ -1,4 +1,4 @@
-// -*- compile-command: "c++ -g -O0 -std=c++11 spell.cc" -*-
+// -*- compile-command: "c++ -g -O0 -Wall -std=c++11 spell.cc" -*-
 
 #include <iostream>
 #include <iterator>
@@ -10,21 +10,47 @@
 #include <unordered_map>
 #include <memory>
 
-namespace spell
-{
+namespace spell {
+	
+using char_t=char;
+using trigram_t=std::array<char_t,3>;
+using string_t=std::basic_string<char_t>;
 
-using trigram_t=std::array<char,3>;
+const int MAX_STRING=50;
+const int DEFAULT_DISTANCE=1;
+	
+struct Dummy_norm {
+	//Normalization for computing edit distance.
+	//Processing lower & upper case, first capital letter etc.
+	std::string operator()(const std::string& in) {
+		return in;
+	}
+	//De-normalization for output word substitution.
+	std::string out(const std::string& dict_word, const std::string& orig_word) {
+		return dict_word;
+	}
+};
+	
+// Functor for output words ranking. Best word comes first. One way to do it is to use modified
+// edit_distant function with different weight for addition, deletion and replacement.
+struct Dummy_rank {
+	void operator()(std::vector<std::string>& candidates, const std::string& orig_word) {
+		
+	}
+	int operator()(const std::string& word, const std::string& dict_word) {
+		return 1;
+	}
+};
+
 
 class Edit_distance {
 public:
 	Edit_distance(unsigned int max_s): max_s_(max_s), mem(max_s+1,std::vector<int>(max_s+1,0))
 		{}
-	int operator()(const std::string& p, const std::string& t) {
-		if (p.size()> max_s_ || std::max(p.size(),t.size())-std::min(p.size(),t.size())>1)
+	int operator()(const std::string& pattern, const std::string& text) {
+		if (pattern.size()> max_s_ || std::max(pattern.size(),text.size())-std::min(pattern.size(),text.size())>1)
 			return -1;
-		return compute(p, p.size(), t, t.size());
-	}
-	void rank(std::vector<std::string>&, const std::string&) {
+		return compute(pattern, pattern.size(), text, text.size());
 	}
 private:
 	int compute(const std::string& ps, int plen, const std::string& ts, int tlen) {
@@ -54,37 +80,21 @@ private:
 
 class Dict_plain {
 public:
-	class Iter {
-	public:
-		Iter(std::vector<std::string>::const_iterator i): it(i) {
-
-		}
-		Iter& operator++() {
-			++it;
-			return *this;
-		}
-		const std::string& operator*() const{
-			return *it;
-		}
-		bool operator==(const Iter& l) const {
-			return it == l.it;
-		}
-		bool operator!=(const Iter& l) const {
-			return !(*this == l);
-		}
-	private:
-		std::vector<std::string>::const_iterator it;
-	};
-	std::pair<Iter,Iter> get_range(const std::string& word) const {
-		return std::make_pair(Iter(dict.begin()), Iter(dict.end()));
-	}
 	Dict_plain(const std::string& file) {
 		std::ifstream i;
 		i.exceptions(std::ifstream::badbit);
 		i.open(file);
 		std::copy(std::istream_iterator<std::string>(i), std::istream_iterator<std::string>(),
 			  std::back_inserter(dict));
+		std::sort(dict.begin(), dict.end());
 	};
+	using Dict_iter=std::vector<std::string>::const_iterator;
+	std::pair<Dict_iter,Dict_iter> get_range(const std::string& word) const {
+		return std::make_pair(dict.begin(), dict.end());
+	}
+	bool exist(const std::string& word) {
+		return std::binary_search(dict.begin(),dict.end(), word);
+	}
 protected:
 	const std::vector<std::string>& words(void) const {
 		return dict;
@@ -161,30 +171,20 @@ public:
 	static std::shared_ptr<std::vector<trigram_t>> gen_trigrams(const std::string& w) {
 		auto result = std::make_shared<std::vector<trigram_t>>();
 		result->reserve(w.size());
-		trigram_t trig = {{'$','$','$'}};
+		
 		if (w.size()==0)
 			return result;
 		// Put all 1`s and 2`s letters words in the special bucket
 		if (w.size() == 1 || w.size() == 2)
-			result->push_back(trig);
+			result->emplace_back(trigram_t({{'$','$','$'}}));
 		if (w.size()==1) {
-			trig[1] = w[0];
-			result->push_back(trig);
+			result->emplace_back(trigram_t({{'$',w[0],'$'}}));
 		} else {
 			for(size_t i = 0; i<w.size()-2; ++i) {
-				for(int j = 0; j<3; ++j) {
-					trig[j]=w[i+j];
-				}
-				result->push_back(trig);
+				result->emplace_back(trigram_t({{w[i],w[i+1],w[i+2]}}));
 			}
-			trig[0]='$';
-			trig[1]=w[0];
-			trig[2]=w[1];
-			result->push_back(trig);
-			trig[0]=w[w.size()-2];
-			trig[1]=w[w.size()-1];
-			trig[2]='$';
-			result->push_back(trig);
+			result->emplace_back(trigram_t({{'$',w[0],w[1]}}));
+			result->emplace_back(trigram_t({{w[w.size()-2],w[w.size()-1],'$'}}));
 		}
 		return result;
 	}
@@ -192,7 +192,7 @@ private:
 	std::unordered_map<trigram_t,std::vector<int>,trigram_hash> tri_hash;
 };
 
-const int MAX_STRING=50;
+
 
 template<typename Dict_impl, typename Edit_fn>
 class Dictionary {
@@ -200,18 +200,18 @@ public:
 	Dictionary(const std::string& dict_file): dict(dict_file), e_distance(MAX_STRING) {
 
 	}
-	std::vector<std::string> get_close_words(const std::string& word) {
+	std::vector<std::string> get_close_words(const std::string& word, int target_distance) {
 		std::vector<std::string> result;
-		auto ptr = dict.get_range(word);
-		while(ptr.first!=ptr.second) {
-			int distance = e_distance(word, *(ptr.first));
-			if (distance == 0) {
-				result.clear();
-				result.push_back(*(ptr.first));
-				break;
-			} else if (distance == 1)
-				result.push_back(*(ptr.first));
-			++ptr.first;
+		//Shortcut to correctlly spelling words O(log(n))
+		if (dict.exist(word)) {
+			result.push_back(word);
+		} else {
+			auto ptr = dict.get_range(word);
+			while(ptr.first!=ptr.second) {
+				if (e_distance(word, *(ptr.first)) == target_distance)
+					result.push_back(*(ptr.first));
+				++ptr.first;
+			}
 		}
 		return result;
 	}
@@ -254,22 +254,28 @@ private:
 int
 main(int ac, char* av[])
 {
+	if (ac!=3) {
+		std::cerr<<"Usage: "<<av[0]<<" <Dictionary_file> <Text_for_spelling_file>"<<std::endl;
+		return 0;
+	}
 	try {
-		spell::Lexer lex(ac>1?av[1]:"/dev/fd/0");
-		spell::Dictionary<spell::Dict_trigram,spell::Edit_distance> dict("./words.txt");
+		spell::Lexer lex(av[2]);
+		spell::Dictionary<spell::Dict_trigram,spell::Edit_distance> dict(av[1]);
 
 		std::string word,spacing;
 		word.reserve(spell::MAX_STRING);
 		spacing.reserve(1024);
 		while(lex.next_word(word,spacing)) {
-			std::clog<<spacing;
+			std::cout<<spacing;
 			if (word.empty())
 				continue;
-			std::vector<std::string> candidates(dict.get_close_words(word));
-			if (!candidates.empty()) {
-				std::clog<<candidates[0];
+			std::vector<std::string> candidates=dict.get_close_words(spell::Dummy_norm()(word),
+										 spell::DEFAULT_DISTANCE);
+			if (!candidates.empty()){
+				spell::Dummy_rank()(candidates, word);
+				std::cout<<spell::Dummy_norm().out(candidates[0],word);
 			} else if (!word.empty())
-				std::clog<<"["<<word<<"]";
+				std::cout<<"["<<word<<"]";
 		}
 	} catch (std::exception& e) {
 		std::cerr<<"Error: "<<e.what()<<std::endl;
@@ -277,3 +283,5 @@ main(int ac, char* av[])
 	}
 	return 0;
 }
+
+

@@ -179,38 +179,50 @@ namespace knn {
 	class pq {
 	public:
 		typedef std::vector<vector> data_t;
-		typedef std::vector<vector_pq> result_t;
-		pq(int n_s): k_(256), split_dim(n_s);
-			{}
-		void compress(const std::vector<vector>& v, int dim)
-			{
-				//Split original matrix into dim/split_dim matrixes
-				//with shorter vectors (part of original vectors)
-				split(v, dim);
-				
-				int result_dim = dim/split_dim_;
-				compressed_data_.resize(v.size(), vector_pq(result_dim));
-				codebook_.resize(result_dim);
-				int i = 0;
-				// For every shorter matrix. (array of shorter vectors)
-				for(auto & vect: splitted_data_) {
-					// Build k_ (256) centroids.
-					kmean km(split_dim_, vect, k_);
-					auto & classes = km.classes();
-					for(int j = 0; j < classes.size(); ++j)
-						//Assign new centroid number instead of original vector range
-						//TODO: instead of vector of vectors better to make own
-						//Tensor class based on 1-d vector. With flat stucture sse instructures
-						//could be utilized.
-						compressed_data_[j][i] = classes[j];
+		typedef std::vector<pq_vector> result_t;
+		pq(int n_s): k_(256), split_dim(n_s) {
+		}
+		void compress(const std::vector<vector>& v, int dim) {
+			//Split original matrix into dim/split_dim matrixes
+			//with shorter vectors (part of original vectors)
+			split(v, dim);
+			
+			int result_dim = dim/split_dim_;
+			compressed_data_.resize(v.size(), pq_vector(result_dim));
+			codebook_.resize(result_dim);
+			int i = 0;
+			// For every shorter matrix. (array of shorter vectors)
+			for(auto & vect: splitted_data_) {
+				// Build k_ (256) centroids.
+				kmean km(split_dim_, vect, k_);
+				for(int k = 100; k && km.run(); --i);
+				auto & classes = km.classes();
+				for(int j = 0; j < classes.size(); ++j) {
+					//Assign new centroid number instead of original vector range
+					//TODO: instead of vector of vectors better to make own
+					//Tensor class based on 1-d vector. With flat stucture sse instructures
+					//could be utilized.
+					compressed_data_[j][i] = classes[j];
 					//save centroids: save k means
 					codebook_[i] = km.k_means();
 					++i;
 				}
 			}
+		}
 		distances(const vector& vect);
 		rank(int nth);
 	private:
+		codebook_distances(const vector& one) {
+			dim = one.size();
+			clear(codebook_result_);
+			for(int row = 0; row < k_; ++row) {
+				//along col or row?
+				for(int col = 0; col*split_dim_ < dim; ++col) {
+					for(int part_dim = 0; part_dim < split_dim_; ++part_dim)
+						codebook_result_[row][col] +=codebook_[row][col][part_dim]*one[col*split_dim_ + part_dim]; 
+				}
+			}
+		}
 		void split(const std::vector<vector>& v, int dim) {
 			if ((dim % split_dim_) != 0)
 				throw std::runtime_exception("Dimention can not be divided by exact splits.");
@@ -229,7 +241,8 @@ namespace knn {
 		int split_dim_;
 		std::vector<data_t> splitted_data_;
 		result_t compressed_data_;
-		std::vector<std::vector<int>> codebook_;
+		std::vector<std::vector<vector>> codebook_;
+		std::vector<std::vector<double>> codebook_distances_;
 	};
 	
 
