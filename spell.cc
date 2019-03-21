@@ -22,11 +22,11 @@ const int DEFAULT_DISTANCE=1;
 struct Dummy_norm {
 	//Normalization for computing edit distance.
 	//Processing lower & upper case, first capital letter etc.
-	std::string operator()(const std::string& in) {
+	string_t operator()(const string_t& in) {
 		return in;
 	}
 	//De-normalization for output word substitution.
-	std::string out(const std::string& dict_word, const std::string& orig_word) {
+	string_t out(const string_t& dict_word, const string_t& orig_word) {
 		return dict_word;
 	}
 };
@@ -34,10 +34,10 @@ struct Dummy_norm {
 // Functor for output words ranking. Best word comes first. One way to do it is to use modified
 // edit_distant function with different weight for addition, deletion and replacement.
 struct Dummy_rank {
-	void operator()(std::vector<std::string>& candidates, const std::string& orig_word) {
+	void operator()(std::vector<string_t>& candidates, const string_t& orig_word) {
 		
 	}
-	int operator()(const std::string& word, const std::string& dict_word) {
+	int operator()(const string_t& word, const string_t& dict_word) {
 		return 1;
 	}
 };
@@ -47,13 +47,13 @@ class Edit_distance {
 public:
 	Edit_distance(unsigned int max_s): max_s_(max_s), mem(max_s+1,std::vector<int>(max_s+1,0))
 		{}
-	int operator()(const std::string& pattern, const std::string& text) {
+	int operator()(const string_t& pattern, const string_t& text) {
 		if (pattern.size()> max_s_ || std::max(pattern.size(),text.size())-std::min(pattern.size(),text.size())>1)
 			return -1;
 		return compute(pattern, pattern.size(), text, text.size());
 	}
 private:
-	int compute(const std::string& ps, int plen, const std::string& ts, int tlen) {
+	int compute(const string_t& ps, int plen, const string_t& ts, int tlen) {
 
 		mem[0][0] = 0;
 		for(int p = 1; p < plen+1; ++p)
@@ -80,33 +80,33 @@ private:
 
 class Dict_plain {
 public:
-	Dict_plain(const std::string& file) {
+	Dict_plain(const string_t& file) {
 		std::ifstream i;
 		i.exceptions(std::ifstream::badbit);
 		i.open(file);
-		std::copy(std::istream_iterator<std::string>(i), std::istream_iterator<std::string>(),
+		std::copy(std::istream_iterator<string_t>(i), std::istream_iterator<string_t>(),
 			  std::back_inserter(dict));
 		std::sort(dict.begin(), dict.end());
 	};
-	using Dict_iter=std::vector<std::string>::const_iterator;
-	std::pair<Dict_iter,Dict_iter> get_range(const std::string& word) const {
+	using Dict_iter=std::vector<string_t>::const_iterator;
+	std::pair<Dict_iter,Dict_iter> get_range(const string_t& word) const {
 		return std::make_pair(dict.begin(), dict.end());
 	}
-	bool exist(const std::string& word) {
+	bool exist(const string_t& word) {
 		return std::binary_search(dict.begin(),dict.end(), word);
 	}
 protected:
-	const std::vector<std::string>& words(void) const {
+	const std::vector<string_t>& words(void) const {
 		return dict;
 	}
 private:
-	std::vector<std::string> dict;
+	std::vector<string_t> dict;
 };
 
 
 struct trigram_hash {
 	size_t operator()(const trigram_t& tri) const {
-		return (std::hash<char>()(tri[0])*31+std::hash<char>()(tri[1]))*31+std::hash<char>()(tri[2]);
+		return (std::hash<char_t>()(tri[0])*31+std::hash<char_t>()(tri[1]))*31+std::hash<char_t>()(tri[2]);
 	}
 };
 
@@ -114,7 +114,7 @@ struct trigram_hash {
 
 class Dict_trigram: public Dict_plain {
 public:
-	Dict_trigram(const std::string& file) : Dict_plain(file) {
+	Dict_trigram(const string_t& file) : Dict_plain(file) {
 		auto ptr = Dict_plain::get_range("");
 		for(int i=0; ptr.first!=ptr.second;  ++ptr.first, ++i) {
 			auto tri_v = gen_trigrams(*ptr.first);
@@ -140,7 +140,7 @@ public:
 			}
 			return *this;
 		}
-		const std::string& operator*() const {
+		const string_t& operator*() const {
 			return (dict->words())[dict->tri_hash.at(*it)[offset]];
 		}
 		bool operator==(const Iter& l) const {
@@ -162,13 +162,13 @@ public:
 		std::shared_ptr<std::vector<trigram_t>> trigrams;
 	};
 
-	std::pair<Iter,Iter> get_range(const std::string& word) const {
+	std::pair<Iter,Iter> get_range(const string_t& word) const {
 		auto tri_v = gen_trigrams(word);
 		return std::make_pair(Iter(tri_v->begin(), this, tri_v),
 				      Iter(tri_v->end(), this, tri_v));
 	}
 
-	static std::shared_ptr<std::vector<trigram_t>> gen_trigrams(const std::string& w) {
+	static std::shared_ptr<std::vector<trigram_t>> gen_trigrams(const string_t& w) {
 		auto result = std::make_shared<std::vector<trigram_t>>();
 		result->reserve(w.size());
 		
@@ -197,11 +197,11 @@ private:
 template<typename Dict_impl, typename Edit_fn>
 class Dictionary {
 public:
-	Dictionary(const std::string& dict_file): dict(dict_file), e_distance(MAX_STRING) {
+	Dictionary(const string_t& dict_file): dict(dict_file), e_distance(MAX_STRING) {
 
 	}
-	std::vector<std::string> get_close_words(const std::string& word, int target_distance) {
-		std::vector<std::string> result;
+	std::vector<string_t> get_close_words(const string_t& word, int target_distance) {
+		std::vector<string_t> result;
 		//Shortcut to correctlly spelling words O(log(n))
 		if (dict.exist(word)) {
 			result.push_back(word);
@@ -223,14 +223,14 @@ private:
 
 class Lexer {
 public:
-	Lexer(const std::string& fname) {
+	Lexer(const string_t& fname) {
 		ifile.exceptions(std::ifstream::badbit);
 		ifile.open(fname);
 	}
-	bool next_word(std::string& word, std::string& spacing) {
+	bool next_word(string_t& word, string_t& spacing) {
 		word.clear();
 		spacing.clear();
-		char c;
+		char_t c;
 		while (ifile.get(c)) {
 			if (std::iscntrl(c) || std::isblank(c) || std::ispunct(c)) {
 				if (word.empty())
@@ -262,14 +262,14 @@ main(int ac, char* av[])
 		spell::Lexer lex(av[2]);
 		spell::Dictionary<spell::Dict_trigram,spell::Edit_distance> dict(av[1]);
 
-		std::string word,spacing;
+		spell::string_t word,spacing;
 		word.reserve(spell::MAX_STRING);
 		spacing.reserve(1024);
 		while(lex.next_word(word,spacing)) {
 			std::cout<<spacing;
 			if (word.empty())
 				continue;
-			std::vector<std::string> candidates=dict.get_close_words(spell::Dummy_norm()(word),
+			std::vector<spell::string_t> candidates=dict.get_close_words(spell::Dummy_norm()(word),
 										 spell::DEFAULT_DISTANCE);
 			if (!candidates.empty()){
 				spell::Dummy_rank()(candidates, word);
