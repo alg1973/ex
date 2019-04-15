@@ -9,6 +9,10 @@
 #include <cctype>
 #include <unordered_map>
 #include <memory>
+#include <string>
+#include <codecvt>
+#include <locale>
+
 
 namespace spell {
 	
@@ -220,7 +224,19 @@ private:
 	Edit_fn e_distance;
 };
 
+string_t
+utf8_to_string(const std::string& utf8str, const std::locale& loc)
+{
 
+	std::wstring_convert<std::codecvt_utf8<wchar_t>> wconv;
+	std::wstring wstr = wconv.from_bytes(utf8str.c_str());
+
+	std::vector<char> buf(wstr.size());
+	std::use_facet<std::ctype<wchar_t>>(loc).narrow(wstr.data(), wstr.data() + wstr.size(), '?', buf.data());
+	return string_t(buf.data(), buf.size());
+}
+
+	
 class Lexer {
 public:
 	Lexer(const string_t& fname) {
