@@ -41,7 +41,8 @@ using dict_t=std::unordered_set<unsigned>;
 
 class collector {
 public:
-	collector(const dict_t& dict_, std::ostream& o): current_word(), s_hash(), dict(dict_), ofile(o) {
+	collector(const dict_t& dict_, std::ostream& o, int max_len): current_word(), s_hash(), dict(dict_),
+								      ofile(o), max_dict_len(max_len) {
 		current_word.reserve(5);
 	}
 	void operator() (char c, bool isword) {
@@ -59,19 +60,30 @@ public:
 	}
 	
 	void print_word() {
-		bool dict_word = dict.count(s_hash);
-		if (dict_word)
-			ofile<<PREFIX;
-		ofile<<current_word;
-		if (dict_word)
-			ofile<<SUFFIX;
+		if (s_hash!=BAD_HASH) {
+			bool dict_word = dict.count(s_hash);
+			if (dict_word)
+				ofile<<PREFIX;
+			ofile<<current_word;
+			if (dict_word)
+				ofile<<SUFFIX;
+		}
 		current_word.clear();
 		s_hash=0;
 	}
 	
 	void add_char(char c) {
+		if (s_hash == BAD_HASH) {
+			print_char(c);
+			return;
+		}
 		current_word +=c;
-		s_hash = char_hash(c, s_hash);
+		if (current_word.size()>max_dict_word) {
+			ofile<<current_word;
+			s_hash = BAD_HASH;
+		} else {
+			s_hash = char_hash(c, s_hash);
+		}
 	}
 	
 	bool have_word(void) {
@@ -82,6 +94,8 @@ private:
 	unsigned s_hash;
 	const dict_t& dict;
 	std::ostream& ofile;
+	int max_dict_len;
+	static const unsigned int BAD_HASH = 0xffffffff;  
 	static const std::string SUFFIX = "</i>";
 	static const std::string PREFIX = "<i class=\"" "src\">";
 };
@@ -215,14 +229,17 @@ main(int ac, char* av[])
 	}
 	std::string word;
 	dict_t dic;
-	while(dfile>>word)
+	int max_len = 0;
+	while(dfile>>word) {
 		dic.insert(str_hash(word));
+		max_len = std::max(max_len, word.size());
+	};
 
 	if (av[2]==std::string("text")) {
-		doc_reader<collector> rd(collector(dic, std::cout));
+		doc_reader<collector> rd(collector(dic, std::cout, max_len));
 		rd.read(std::cin);
 	} else if (av[2] == std::string("html")) {
-		html_reader<collector> rd(collector(dic, std::cout));
+		html_reader<collector> rd(collector(dic, std::cout, max_len));
 		rd.read(std::cin);
 	}
 		
