@@ -5,6 +5,7 @@
 #include <random>
 #include <chrono>
 #include <string>
+#include <map>
 
 class skip_list {
 public:
@@ -33,8 +34,17 @@ public:
         return max_lvl;
     }
     node* search(node* ptr, int target, int lvl) {
-        if (ptr == nullptr)
+        op_count++;
+        if (ptr == nullptr) {
+            //std::cout<<"(nullptr)";
             return nullptr;
+        }
+        if (ptr->keyval.has_value()) {
+            //std::cout<<"("<<(*ptr->keyval).first;
+        }else {
+            //std::cout<<"(nil";
+        }
+        //std::cout<<","<<ptr->size<<","<<lvl<<")";
         if (ptr->keyval.has_value() && ((*ptr->keyval).first == target))
             return ptr;
         node* nxt = ptr->next[lvl];
@@ -44,15 +54,18 @@ public:
             return search(nxt, target, lvl);
     }
     std::optional<keyval_t> search(int target) {
+        op_count = 0;
         if (auto ptr = search(head, target, m_lvl)) {
+            //std::cout<<"\n";
             return ptr->keyval;
         }
+        //std::cout<<"\n";
         return std::nullopt;
     }
     node* insert(node* ptr, node* cur, int lvl) {
         node* nxt = ptr->next[lvl];
         if (nxt == nullptr || (*cur->keyval).first < (*nxt->keyval).first) {
-            if (lvl < cur->next.size()) {
+            if (lvl < cur->size) {
                 ptr->next[lvl] = cur;
                 cur->next[lvl] = nxt;
             }
@@ -89,6 +102,7 @@ public:
     bool erase(int num) {
         return erase(head, num, m_lvl);   
     }
+    int op_count;
     int m_lvl = 0;
     node* head;
     std::random_device rnd;
@@ -166,17 +180,23 @@ main(int ac, char* av[])
     /*
     std::cout<<"Max level: "<<sk.m_lvl<<" Node sizes:\n";
     auto p = sk.head;
+    std::map<int,int> cnt;
     while(p) {
-        std::cout<<p->size<<"\n";
+        cnt[p->size]++;
         p = p->next[0];
     }
+    for(const auto& x: cnt) {
+        std::cout<<x.first<<" sz : "<<x.second<<" cnt\n";
+    }
     */
-    
     std::cout<<"Starting searching skip list.\n";
     start = std::chrono::steady_clock::now();
-    for(int v: data)
+    //std::map<int,int> op_count;
+    for(int v: data) {
         if (sk.search(v) == std::nullopt)
             std::cout<<"missing "<<v<<"\n";
+        //op_count[sk.op_count]++;
+    }
     end = std::chrono::steady_clock::now();
     std::cout<<"Ending inserting into skip list.\n";
     elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
@@ -184,7 +204,9 @@ main(int ac, char* av[])
         std::chrono::nanoseconds::period::den <<" sec ";
     std::cout<<elapsed.count()* std::chrono::nanoseconds::period::num %
         std::chrono::nanoseconds::period::den <<" nSec "<<std::endl;
-
-
     std::cout<<"Ending searching skip list.\n";
+    //for(const auto& x: op_count) {
+    //    std::cout<<x.first<<" stp : "<<x.second<<" cnt\n";
+    //}
+
 }
