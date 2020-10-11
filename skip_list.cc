@@ -160,7 +160,7 @@ main(int ac, char* av[])
     std::cout<<elapsed.count()* std::chrono::nanoseconds::period::num /
         std::chrono::nanoseconds::period::den <<" sec ";
     std::cout<<elapsed.count()* std::chrono::nanoseconds::period::num %
-        std::chrono::nanoseconds::period::den <<" uSec "<<std::endl;
+        std::chrono::nanoseconds::period::den <<" nSec "<<std::endl;
 
 
     /*
@@ -173,8 +173,18 @@ main(int ac, char* av[])
     */
     
     std::cout<<"Starting searching skip list.\n";
+    start = std::chrono::steady_clock::now();
     for(int v: data)
         if (sk.search(v) == std::nullopt)
             std::cout<<"missing "<<v<<"\n";
+    end = std::chrono::steady_clock::now();
+    std::cout<<"Ending inserting into skip list.\n";
+    elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+    std::cout<<elapsed.count()* std::chrono::nanoseconds::period::num /
+        std::chrono::nanoseconds::period::den <<" sec ";
+    std::cout<<elapsed.count()* std::chrono::nanoseconds::period::num %
+        std::chrono::nanoseconds::period::den <<" nSec "<<std::endl;
+
+
     std::cout<<"Ending searching skip list.\n";
 }
