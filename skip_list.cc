@@ -10,7 +10,7 @@
 template<typename KEY, typename VALUE>
 class skip_list {
 public:
-    static const int max_lvl = 32;
+    static const int max_lvl = 28;
     using keyval_t = std::pair<KEY,VALUE>;
     struct node {
         node(): keyval(), size(max_lvl), next({})
@@ -46,9 +46,9 @@ public:
         else
             return search(nxt, target, lvl);
     }
-    std::optional<keyval_t> search(KEY target) const {
+    std::optional<std::reference_wrapper<VALUE>> search(KEY target) const {
         if (auto ptr = search(head, target, m_lvl)) {
-            return ptr->keyval;
+            return {(*ptr->keyval).second};
         }
         return std::nullopt;
     }
@@ -120,12 +120,8 @@ main(int ac, char* av[])
                      if (!r.has_value())
                          std::cout<<"no "<<k<<std::endl;
                      else {
-                         auto [rk, rv] = *r;
-                         if (rk!=k) {
-                             std::cout<< "k!=rk " <<k<<"!="<<rk<<std::endl;
-                         }
-                         if (rv!=v) {
-                             std::cout<< "v!=rv " <<v<<"!="<<rv<<std::endl;
+                         if (*r!=v) {
+                             std::cout<< "v!=rv " <<v<<"!="<<*r<<std::endl;
                          }
                      }
                  };
@@ -182,13 +178,13 @@ main(int ac, char* av[])
     std::cout<<"Starting searching skip list.\n";
     start = std::chrono::steady_clock::now();
     //std::map<int,int> op_count;
+    int gcnt = 0;
     for(int v: data) {
-        if (sk.search(v) == std::nullopt)
-            std::cout<<"missing "<<v<<"\n";
-        //op_count[sk.op_count]++;
+        auto r = sk.search(v);
+        gcnt += r.has_value()?1:0;
     }
     end = std::chrono::steady_clock::now();
-    std::cout<<"Ending searching skip list.\n";
+    std::cout<<"Ending searching skip list."<<gcnt<<" keys found.\n";
     elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     std::cout<<elapsed.count()* std::chrono::nanoseconds::period::num /
         std::chrono::nanoseconds::period::den <<" sec ";
@@ -213,11 +209,11 @@ main(int ac, char* av[])
 
     std::cout<<"Starting searching RB map.\n";
     start = std::chrono::steady_clock::now();
+    int rbcnt = 0;
     for(int v: data)
-        if (rb.find(v) == rb.end())
-            std::cout<<"Missing\n";
+        rbcnt += rb.find(v) == rb.end()?0:1;
     end = std::chrono::steady_clock::now();
-    std::cout<<"Ending searching RB map.\n";
+    std::cout<<"Ending searching RB map."<<rbcnt<<" found keys.\n";
     elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     std::cout<<elapsed.count()* std::chrono::nanoseconds::period::num /
         std::chrono::nanoseconds::period::den <<" sec ";
