@@ -1,4 +1,5 @@
 #include <optional>
+#include <functional>
 #include <iostream>
 #include <vector>
 #include <array>
@@ -48,7 +49,7 @@ public:
     }
     std::optional<std::reference_wrapper<VALUE>> search(const KEY& target) const {
         if (auto ptr = search(head, target, m_lvl)) {
-            return {(*ptr->keyval).second};
+            return {std::ref((*ptr->keyval).second)};
         }
         return std::nullopt;
     }
