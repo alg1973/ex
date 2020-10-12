@@ -50,7 +50,7 @@ public:
         }
         return max_lvl;
   }
-  node* search(node* ptr, KEY target, int lvl) const {
+  node* search(node* ptr,const KEY& target, int lvl) const {
         if (ptr == nullptr) {
             return nullptr;
         }
@@ -62,7 +62,14 @@ public:
         else
             return search(nxt, target, lvl);
     }
-    std::optional<keyval_t> search(KEY target) const {
+    
+    std::optional<std::reference_wrapper<VALUE>> search(const KEY& target) const {
+        if (auto ptr = search(head, target, m_lvl)) {
+            return {(*ptr->keyval).second};
+        }
+        return std::nullopt;
+    }
+    std::optional<keyval_t> search_kv(const KEY& target) const {
         if (auto ptr = search(head, target, m_lvl)) {
             return ptr->keyval;
         }
@@ -80,11 +87,11 @@ public:
             return insert(nxt, cur, lvl);
     }
     void add(KEY k, VALUE v) {
-        node* n = create_node(k,v, rand_lvl());
+        node* n = create_node(std::move(k),std::move(v), rand_lvl());
         insert(head, n, m_lvl);
     }
     
-    bool erase(node* ptr, KEY k, int lvl) {
+    bool erase(node* ptr,const KEY& k, int lvl) {
         if (ptr == nullptr)
             return false;
         node* nxt = ptr->next[lvl];
@@ -106,7 +113,7 @@ public:
                 return erase(nxt, k, lvl);
     }
     
-    bool erase(KEY num) {
+    bool erase(const KEY& num) {
         return erase(head, num, m_lvl);   
     }
 
@@ -142,12 +149,8 @@ main(int ac, char* av[])
                      if (!r.has_value())
                          std::cout<<"no "<<k<<std::endl;
                      else {
-                         auto [rk, rv] = *r;
-                         if (rk!=k) {
-                             std::cout<< "k!=rk " <<k<<"!="<<rk<<std::endl;
-                         }
-                         if (rv!=v) {
-                             std::cout<< "v!=rv " <<v<<"!="<<rv<<std::endl;
+                         if (*r!=v) {
+                             std::cout<< "v!=rv " <<v<<"!="<<*r<<std::endl;
                          }
                      }
                  };
@@ -207,15 +210,15 @@ main(int ac, char* av[])
     std::cout<<"Starting searching skip list.\n";
     start = std::chrono::steady_clock::now();
     //std::map<int,int> op_count;
+    int skcount = 0;
     if (test & 1) {
       for(int v: data) {
-        if (sk.search(v) == std::nullopt)
-            std::cout<<"missing "<<v<<"\n";
-        //op_count[sk.op_count]++;
+          auto r = sk.search(v);
+          skcount += r.has_value()?1:0;
       }
     }
     end = std::chrono::steady_clock::now();
-    std::cout<<"Ending searching skip list.\n";
+    std::cout<<"Ending searching skip list. "<<skcount<<" goods.\n";
     elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     std::cout<<elapsed.count()* std::chrono::nanoseconds::period::num /
         std::chrono::nanoseconds::period::den <<" sec ";
@@ -242,13 +245,13 @@ main(int ac, char* av[])
 
     std::cout<<"Starting searching RB map.\n";
     start = std::chrono::steady_clock::now();
+    int rbcount = 0;
     if (test & 2) {
       for(int v: data)
-        if (rb.find(v) == rb.end())
-            std::cout<<"Missing\n";
+          rbcount += rb.find(v) == rb.end()?0:1;
     }
     end = std::chrono::steady_clock::now();
-    std::cout<<"Ending searching RB map.\n";
+    std::cout<<"Ending searching RB map. "<<rbcount<<" goods. \n";
     elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     std::cout<<elapsed.count()* std::chrono::nanoseconds::period::num /
         std::chrono::nanoseconds::period::den <<" sec ";
