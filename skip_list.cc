@@ -34,7 +34,7 @@ public:
         }
         return max_lvl;
     }
-    node* search(node* ptr, KEY target, int lvl) const {
+    node* search(node* ptr, const KEY& target, int lvl) const {
         if (ptr == nullptr) {
             return nullptr;
         }
@@ -46,7 +46,7 @@ public:
         else
             return search(nxt, target, lvl);
     }
-    std::optional<std::reference_wrapper<VALUE>> search(KEY target) const {
+    std::optional<std::reference_wrapper<VALUE>> search(const KEY& target) const {
         if (auto ptr = search(head, target, m_lvl)) {
             return {(*ptr->keyval).second};
         }
@@ -68,7 +68,7 @@ public:
         insert(head, n, m_lvl);
     }
     
-    bool erase(node* ptr, KEY k, int lvl) {
+    bool erase(node* ptr,const KEY& k, int lvl) {
         if (ptr == nullptr)
             return false;
         node* nxt = ptr->next[lvl];
@@ -89,7 +89,7 @@ public:
                 return erase(nxt, k, lvl);
     }
     
-    bool erase(KEY num) {
+    bool erase(const KEY& num) {
         return erase(head, num, m_lvl);   
     }
 
