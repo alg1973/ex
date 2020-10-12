@@ -10,21 +10,37 @@
 template<typename KEY, typename VALUE>
 class skip_list {
 public:
-    static const int max_lvl = 32;
+    static const int max_lvl = 24;
     using keyval_t = std::pair<KEY,VALUE>;
     struct node {
-        node(): keyval(), size(max_lvl), next({})
-            {}
-        node(KEY k, VALUE v, int lvl): keyval(std::make_pair(k,v)), size(lvl), next({})
-            {}
-        std::optional<keyval_t> keyval;
-        int size;
-        std::array<node*, max_lvl> next;
+      node(): keyval(), size(max_lvl)
+      {
+	for(int i=0;i<size;++i) next[i] = nullptr;
+      }
+      node(KEY k, VALUE v, int lvl): keyval(std::make_pair(k,v)), size(lvl)
+      {
+	for(int i=0;i<size;++i) next[i] = nullptr;
+      }
+      std::optional<keyval_t> keyval;
+      int size;
+      //std::array<node*, max_lvl> next;
+      node* next[1];
     };
-    skip_list(): mt(rnd()), dist(0, std::numeric_limits<int>::max())  {
-        head = new node;   
+    node* create_node(KEY k, VALUE v, int lvl) {
+      int sz = sizeof(node) + sizeof(node*)*(lvl-1);
+      void* mem = ::operator new(sz);
+      return  new (mem) node(k, v, lvl);
     }
-    int rand_lvl() {
+    node* create_node() {
+      int sz = sizeof(node) + sizeof(node*)*(max_lvl-1);
+      void* mem = ::operator  new(sz);
+      return  new (mem) node;
+    }
+
+  skip_list(): mt(rnd()), dist(0, std::numeric_limits<int>::max())  {
+    head = create_node();   
+  }
+  int rand_lvl() {
         int dice = dist(mt);
         for(int i = 1, t=2; i<max_lvl; ++i, t+=t) {
             if (dice > std::numeric_limits<int>::max()/t) {
@@ -33,8 +49,8 @@ public:
             }
         }
         return max_lvl;
-    }
-    node* search(node* ptr, KEY target, int lvl) const {
+  }
+  node* search(node* ptr, KEY target, int lvl) const {
         if (ptr == nullptr) {
             return nullptr;
         }
@@ -64,7 +80,7 @@ public:
             return insert(nxt, cur, lvl);
     }
     void add(KEY k, VALUE v) {
-        node* n = new node (k,v, rand_lvl());
+        node* n = create_node(k,v, rand_lvl());
         insert(head, n, m_lvl);
     }
     
@@ -81,8 +97,9 @@ public:
         if ((*nxt->keyval).first == k) {
                 ptr->next[lvl] = nxt->next[lvl];
                 if (lvl == 0) {
-                    delete nxt;
-                    return true;
+		  nxt->~node();
+		  ::operator delete(reinterpret_cast<void*>(nxt));
+		  return true;
                 }
                 return erase(ptr, k, lvl-1);
         } else 
@@ -110,6 +127,11 @@ main(int ac, char* av[])
 
     if(ac>1)
         iters = std::stoi(av[1]);
+
+    int test = 3;
+    if (ac>2) {
+      test = std::stoi(av[2]);
+    }
     
     skip_list<int,int> sk;
     sk.add(1,1);
@@ -156,8 +178,10 @@ main(int ac, char* av[])
     std::cout<<"Starting inserting into skip list.\n";
     
     auto start = std::chrono::steady_clock::now();
-    for(int v: data)
+    if (test & 1) {
+      for(int v: data)
         sk.add(v,v);
+    }
     auto end = std::chrono::steady_clock::now();
     std::cout<<"Ending inserting into skip list.\n";
     auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
@@ -167,8 +191,9 @@ main(int ac, char* av[])
         std::chrono::nanoseconds::period::den <<" nSec "<<std::endl;
 
 
+
+    std::cout<<"Max level: "<<sk.m_lvl<<"\n";
     /*
-    std::cout<<"Max level: "<<sk.m_lvl<<" Node sizes:\n";
     auto p = sk.head;
     std::map<int,int> cnt;
     while(p) {
@@ -182,10 +207,12 @@ main(int ac, char* av[])
     std::cout<<"Starting searching skip list.\n";
     start = std::chrono::steady_clock::now();
     //std::map<int,int> op_count;
-    for(int v: data) {
+    if (test & 1) {
+      for(int v: data) {
         if (sk.search(v) == std::nullopt)
             std::cout<<"missing "<<v<<"\n";
         //op_count[sk.op_count]++;
+      }
     }
     end = std::chrono::steady_clock::now();
     std::cout<<"Ending searching skip list.\n";
@@ -201,8 +228,10 @@ main(int ac, char* av[])
     std::map<int,int> rb;
     std::cout<<"Starting inserting into RB map.\n";
     start = std::chrono::steady_clock::now();
-    for(int v: data)
+    if (test & 2) {
+      for(int v: data)
         rb[v]=v;
+    }
     end = std::chrono::steady_clock::now();
     std::cout<<"Ending inserting into RB map.\n";
     elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
@@ -213,9 +242,11 @@ main(int ac, char* av[])
 
     std::cout<<"Starting searching RB map.\n";
     start = std::chrono::steady_clock::now();
-    for(int v: data)
+    if (test & 2) {
+      for(int v: data)
         if (rb.find(v) == rb.end())
             std::cout<<"Missing\n";
+    }
     end = std::chrono::steady_clock::now();
     std::cout<<"Ending searching RB map.\n";
     elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
