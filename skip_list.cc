@@ -16,14 +16,14 @@ public:
     struct node {
       node(): keyval(), size(max_lvl)
       {
-	init();
+          init();
       }
-      node(KEY k, VALUE v, int lvl): keyval(std::make_pair(std::move(k),std::move(v))), size(lvl)
+      node(KEY k, VALUE v, int lvl): keyval(std::in_place, std::move(k), std::move(v)), size(lvl)
       {
-	init();
+          init();
       }
       void init(void) {
-	for(int i=0;i<size;++i) next[i] = nullptr;
+          for(int i=0;i<size;++i) next[i] = nullptr;
       }
       std::optional<keyval_t> keyval;
       int size;
@@ -36,7 +36,7 @@ private:
     }
     node* create_node(KEY k, VALUE v, int lvl) {
       void* mem = alloc(lvl);
-      return  new (mem) node(k, v, lvl);
+      return  new (mem) node(std::move(k), std::move(v), lvl);
     }
     node* create_node() {
       void* mem = alloc(max_lvl);
@@ -78,20 +78,20 @@ public:
     }
 
   std::optional<std::reference_wrapper<const VALUE>> search(const KEY& target) const {
-        if (auto ptr = search(head, target, m_lvl)) {
-            return {std::cref((*ptr->keyval).second)};
+      if (auto ptr = search(head, target, m_lvl)) {
+            return {std::cref(*ptr->keyval)};
         }
         return std::nullopt;
     }
   std::optional<std::reference_wrapper<keyval_t>> search_kv(const KEY& target) {
-        if (auto ptr = search(head, target, m_lvl)) {
-            return {std::ref((*ptr->keyval).second)};
+      if (auto ptr = search(head, target, m_lvl)) {
+            return {std::ref(*ptr->keyval)};
         }
         return std::nullopt;
   }
 
   std::optional<std::reference_wrapper<const keyval_t>> search_kv(const KEY& target) const {
-        if (auto ptr = search(head, target, m_lvl)) {
+      if (auto ptr = search(head, target, m_lvl)) {
             return {std::cref((*ptr->keyval).second)};
         }
         return std::nullopt;
@@ -127,9 +127,9 @@ private:
         if ((*nxt->keyval).first == k) {
                 ptr->next[lvl] = nxt->next[lvl];
                 if (lvl == 0) {
-		  nxt->~node();
-		  ::operator delete(reinterpret_cast<void*>(nxt));
-		  return true;
+                    nxt->~node();
+                    ::operator delete(reinterpret_cast<void*>(nxt));
+                    return true;
                 }
                 return erase(ptr, k, lvl-1);
         } else 
@@ -151,6 +151,29 @@ private:
 };
 
 
+struct Test {
+    Test(): v(0) {
+    }
+    Test(int v_): v(v_) {
+    }
+    Test(const Test& v_): v(v_.v) {
+    }
+    Test(Test&& v_): v(v_.v) {
+    }
+    int v;
+};
+
+bool
+operator<(const Test& l, const Test& r)
+{
+    return l.v < r.v;
+}
+
+bool
+operator==(const Test& l, const Test& r)
+{
+    return l.v == r.v;
+}
 
 
 int
@@ -270,4 +293,14 @@ main(int ac, char* av[])
         std::chrono::nanoseconds::period::den <<" sec ";
     std::cout<<elapsed.count()* std::chrono::nanoseconds::period::num %
         std::chrono::nanoseconds::period::den <<" nSec "<<std::endl;
+
+    skip_list<Test,Test> sk2;
+    sk2.add(1,11);
+    sk2.add(Test(2), Test(22));
+    Test t1(3), t2(33);
+    sk2.add(t1,t2);
+    if (sk2.search(Test(2)).has_value() && sk2.search(Test(2)).value() == Test(22))
+        std::cout<<"Ok\n";
+    else
+        std::cout<<"Fail\n";
 }
